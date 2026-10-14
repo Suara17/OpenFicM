@@ -48,10 +48,13 @@ import {
   LOCAL_MODEL_INFO,
   type RuntimeResourceState,
 } from "@/settings/remote-resources";
+import * as DocumentPicker from "expo-document-picker";
+import { File } from "expo-file-system";
 import {
   checkOhStoryRelease,
   compareOhStoryVersions,
   getOhStoryUpdateState,
+  importOhStoryPackageFromContent,
   installOhStoryRelease,
   rollbackOhStoryPackage,
   type OhStoryRelease,
@@ -495,6 +498,34 @@ export function SettingsCategoryScreen({ category, onBack }: { category: Exclude
     );
   };
 
+  const pickAndImportOhStory = async () => {
+    setOhStoryBusy(true);
+    setError(null);
+    setOhStoryProgress("正在读取文件…");
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["application/json", "text/plain", "*/*"],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled || !result.assets?.length) {
+        setOhStoryProgress("");
+        return;
+      }
+      const asset = result.assets[0];
+      const file = new File(asset.uri);
+      const content = await file.text();
+      const installed = await importOhStoryPackageFromContent(content);
+      await reloadOhStoryCatalog();
+      setOhStoryProgress(`手动导入成功：${installed.version}（${installed.skills.length} 个技能 · ${installed.agents.length} 个智能体）`);
+    } catch (importErr) {
+      setError(importErr instanceof Error ? importErr.message : String(importErr));
+      setOhStoryProgress("");
+    } finally {
+      setOhStoryBusy(false);
+    }
+  };
+
   const confirmOhStoryRollback = () => {
     const previous = ohStoryState.previous;
     if (!previous) return;
@@ -733,6 +764,7 @@ export function SettingsCategoryScreen({ category, onBack }: { category: Exclude
             </>
           ) : null}
           <Button label={ohStoryBusy ? "处理中" : "检查 GitHub Release"} onPress={() => void checkOhStory()} disabled={ohStoryBusy} loading={ohStoryBusy && ohStoryProgress.includes("检查")} />
+          <Button label="手动导入 oh-story 内容包 (JSON)" variant="secondary" onPress={() => void pickAndImportOhStory()} disabled={ohStoryBusy} />
           {ohStoryUpdateAvailable && ohStoryState.lastCheck ? (
             <Button label={`更新到 ${ohStoryState.lastCheck.version}`} onPress={() => confirmOhStoryInstall(ohStoryState.lastCheck as OhStoryRelease)} disabled={ohStoryBusy} />
           ) : null}

@@ -1,0 +1,128 @@
+{
+  "version": "v1.0.0",
+  "skills": [
+    {
+      "id": "oh-story-skill--story",
+      "name": "网文创作路由",
+      "description": "根据当前网文创作阶段路由任务到专门的技能或智能体",
+      "instructions": "## OpenFicM 移动端兼容规则\n\n此内容来自 oh-story-claudecode，只作为小说创作指令使用。\n- 使用 OpenFicM 提供的章节、角色、世界书、语义检索、技能和子智能体工具。\n- 原文中的 Read/Grep/文件路径应映射为对应的 OpenFicM 读取或检索工具。\n- 不执行 shell、脚本、Hook、浏览器自动化、Git 操作或本地文件部署。\n\n根据用户的创作意图（大纲、起名、世界观设定、正文写作、审校、拆书等），引导或调用相应工具完成网文创作辅助。",
+      "enabled": true
+    },
+    {
+      "id": "oh-story-skill--story-long-write",
+      "name": "长篇网文写作",
+      "description": "长篇网络小说正文连载、章节构思与情节推进",
+      "instructions": "## OpenFicM 移动端兼容规则\n\n此内容来自 oh-story-claudecode，只作为小说创作指令使用。\n- 结合当前作品的卷章、角色设定与世界书展开长篇网文正文创作。\n- 保持黄金三章、期待感、情绪曲线与卡点反转。",
+      "enabled": true
+    },
+    {
+      "id": "oh-story-skill--story-short-write",
+      "name": "短篇网文写作",
+      "description": "短篇故事、知乎体脑洞、反转爽文创作",
+      "instructions": "## OpenFicM 移动端兼容规则\n\n此内容来自 oh-story-claudecode，只作为小说创作指令使用。\n- 适用于万字以内的短篇网文创作，节奏紧凑，突出反转与核心爽点。",
+      "enabled": true
+    },
+    {
+      "id": "oh-story-skill--story-review",
+      "name": "小说审校",
+      "description": "网文错别字、毒点检查、逻辑漏洞与节奏审查",
+      "instructions": "## OpenFicM 移动端兼容规则\n\n此内容来自 oh-story-claudecode，只作为小说创作指令使用。\n- 对提供的章节草稿进行审校，标记逻辑漏洞、人设崩塌点、错漏字与行文节奏问题并提供修改建议。",
+      "enabled": true
+    },
+    {
+      "id": "oh-story-skill--story-long-analyze",
+      "name": "长篇拆文",
+      "description": "分析长篇小说的架构、爽点铺设与情节线索",
+      "instructions": "## OpenFicM 移动端兼容规则\n\n此内容来自 oh-story-claudecode，只作为小说创作指令使用。\n- 拆解长篇小说的核心主线、支线推进、人物弧光和爽点分布。",
+      "enabled": true
+    },
+    {
+      "id": "oh-story-skill--story-short-analyze",
+      "name": "短篇拆文",
+      "description": "分析短篇小说的钩子、叙事视点与高潮反转",
+      "instructions": "## OpenFicM 移动端兼容规则\n\n此内容来自 oh-story-claudecode，只作为小说创作指令使用。\n- 分析短篇网文的开篇设定、悬念设置与收尾技巧。",
+      "enabled": true
+    },
+    {
+      "id": "oh-story-skill--story-deslop",
+      "name": "网文去 AI 味",
+      "description": "去除 AI 生成文本中的公式化套话、生硬转折与假大空描写",
+      "instructions": "## OpenFicM 移动端兼容规则\n\n此内容来自 oh-story-claudecode，只作为小说创作指令使用。\n- 识别并重写正文中机械、冗余、缺乏网文张力的段落，增强现场感、画面感与动作描写。",
+      "enabled": true
+    }
+  ],
+  "agents": [
+    {
+      "id": "oh-story-agent--chapter-extractor",
+      "name": "章节信息提取",
+      "description": "从正文中提取剧情要点、登场人物与伏笔更新",
+      "systemPrompt": "## OpenFicM 移动端执行边界\n\n你是由 OpenFicM 主智能体委派的子智能体。负责从章节正文中梳理提炼关键情节、登场角色与伏笔信息。",
+      "modelId": "",
+      "enabled": true,
+      "kind": "subagent",
+      "skillIds": ["oh-story-skill--story"],
+      "toolNames": ["list_chapters", "read_chapter", "search_chapters", "search_knowledge", "list_characters", "read_character", "list_world_entries", "read_world_entry", "activate_skill"],
+      "delegatableAgentIds": []
+    },
+    {
+      "id": "oh-story-agent--character-designer",
+      "name": "角色设计",
+      "description": "辅助构建小说角色档案、人物关系与性格特色",
+      "systemPrompt": "## OpenFicM 移动端执行边界\n\n你是由 OpenFicM 主智能体委派的子智能体。负责角色档案设计与更新。",
+      "modelId": "",
+      "enabled": true,
+      "kind": "subagent",
+      "skillIds": ["oh-story-skill--story"],
+      "toolNames": ["list_chapters", "read_chapter", "search_chapters", "search_knowledge", "list_characters", "read_character", "list_world_entries", "read_world_entry", "activate_skill", "create_character", "edit_character", "delete_character", "create_world_entry", "edit_world_entry", "delete_world_entry"],
+      "delegatableAgentIds": []
+    },
+    {
+      "id": "oh-story-agent--consistency-checker",
+      "name": "一致性检查",
+      "description": "对比正文与角色/世界书设定，检查吃书与前后矛盾",
+      "systemPrompt": "## OpenFicM 移动端执行边界\n\n你是由 OpenFicM 主智能体委派的子智能体。负责检查情节设定与世界书/角色设定的一致性。",
+      "modelId": "",
+      "enabled": true,
+      "kind": "subagent",
+      "skillIds": ["oh-story-skill--story"],
+      "toolNames": ["list_chapters", "read_chapter", "search_chapters", "search_knowledge", "list_characters", "read_character", "list_world_entries", "read_world_entry", "activate_skill"],
+      "delegatableAgentIds": []
+    },
+    {
+      "id": "oh-story-agent--narrative-writer",
+      "name": "正文写作",
+      "description": "执行具体章节的情景刻画、对话与正文执笔",
+      "systemPrompt": "## OpenFicM 移动端执行边界\n\n你是由 OpenFicM 主智能体委派的子智能体。专注正文描写与章节推进。",
+      "modelId": "",
+      "enabled": true,
+      "kind": "subagent",
+      "skillIds": ["oh-story-skill--story-long-write", "oh-story-skill--story-short-write", "oh-story-skill--story-deslop"],
+      "toolNames": ["list_chapters", "read_chapter", "search_chapters", "search_knowledge", "list_characters", "read_character", "list_world_entries", "read_world_entry", "activate_skill", "write_chapter", "edit_chapter"],
+      "delegatableAgentIds": []
+    },
+    {
+      "id": "oh-story-agent--story-architect",
+      "name": "故事架构",
+      "description": "负责主线大纲、世界观架构与卷层级规划",
+      "systemPrompt": "## OpenFicM 移动端执行边界\n\n你是由 OpenFicM 主智能体委派的子智能体。负责作品架构、剧情主线与世界体系搭建。",
+      "modelId": "",
+      "enabled": true,
+      "kind": "subagent",
+      "skillIds": ["oh-story-skill--story"],
+      "toolNames": ["list_chapters", "read_chapter", "search_chapters", "search_knowledge", "list_characters", "read_character", "list_world_entries", "read_world_entry", "activate_skill", "create_character", "edit_character", "delete_character", "create_world_entry", "edit_world_entry", "delete_world_entry"],
+      "delegatableAgentIds": []
+    },
+    {
+      "id": "oh-story-agent--story-explorer",
+      "name": "故事探索",
+      "description": "头脑风暴、剧情支线发散与灵感收集",
+      "systemPrompt": "## OpenFicM 移动端执行边界\n\n你是由 OpenFicM 主智能体委派的子智能体。负责头脑风暴与创作灵感拓展。",
+      "modelId": "",
+      "enabled": true,
+      "kind": "subagent",
+      "skillIds": ["oh-story-skill--story"],
+      "toolNames": ["list_chapters", "read_chapter", "search_chapters", "search_knowledge", "list_characters", "read_character", "list_world_entries", "read_world_entry", "activate_skill"],
+      "delegatableAgentIds": []
+    }
+  ]
+}

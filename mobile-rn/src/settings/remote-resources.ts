@@ -9,6 +9,8 @@ import {
   checkOhStoryRelease,
   getInstalledOhStoryPackage,
   installOhStoryRelease,
+  isOhStorySkipped,
+  setOhStorySkipped,
 } from "@/settings/oh-story-updater";
 
 const OPENFICM_CATALOG_KEY = "content.openficm.catalog.v1";
@@ -140,9 +142,10 @@ export const LOCAL_MODEL_INFO = {
 export interface ResourceItemState {
   id: "openficm-content" | "oh-story" | "lorn-style" | LocalModelKind;
   label: string;
-  status: "ready" | "missing" | "incomplete";
+  status: "ready" | "missing" | "incomplete" | "skipped";
   detail: string;
   bytes?: number;
+  skippable?: boolean;
 }
 
 export interface RuntimeResourceState {
@@ -467,13 +470,19 @@ async function downloadModel(kind: LocalModelKind, onProgress?: (progress: Resou
 }
 
 export async function getRuntimeResourceState(): Promise<RuntimeResourceState> {
-  const [catalog, ohStory, lorn, embedding, rerank] = await Promise.all([
+  const [catalog, ohStory, lorn, embedding, rerank, ohStorySkipped] = await Promise.all([
     getInstalledOpenFicMCatalog(),
     getInstalledOhStoryPackage(),
     getInstalledLornStylePackage(),
     verifyModel("embedding"),
     verifyModel("rerank"),
+    isOhStorySkipped(),
   ]);
+  const ohStoryStatus: ResourceItemState["status"] = ohStory
+    ? "ready"
+    : ohStorySkipped
+    ? "skipped"
+    : "missing";
   const items: ResourceItemState[] = [
     {
       id: "openficm-content",
@@ -484,8 +493,13 @@ export async function getRuntimeResourceState(): Promise<RuntimeResourceState> {
     {
       id: "oh-story",
       label: "oh-story Agent/Skill",
-      status: ohStory ? "ready" : "missing",
-      detail: ohStory ? `${ohStory.version} · ${ohStory.agents.length} 个智能体 · ${ohStory.skills.length} 个技能` : "尚未安装",
+      status: ohStoryStatus,
+      detail: ohStory
+        ? `${ohStory.version} · ${ohStory.agents.length} 个智能体 · ${ohStory.skills.length} 个技能`
+        : ohStorySkipped
+        ? "已跳过（可后续在设置中手动导入）"
+        : "尚未安装",
+      skippable: true,
     },
     {
       id: "lorn-style",
@@ -496,7 +510,7 @@ export async function getRuntimeResourceState(): Promise<RuntimeResourceState> {
     embedding,
     rerank,
   ];
-  const missing = items.filter((item) => item.status !== "ready");
+  const missing = items.filter((item) => item.status !== "ready" && item.status !== "skipped");
   return { ready: missing.length === 0, items, missing };
 }
 
@@ -544,7 +558,7 @@ export async function installMissingRuntimeResources(
   }
 
   const after = await getRuntimeResourceState();
-  if (errors.length || !after.ready) {
+  if (errors.length && !after.ready) {
     const missing = after.missing.map((item) => item.label).join("、");
     throw new Error([...errors, missing ? `仍缺少：${missing}` : ""].filter(Boolean).join("\n"));
   }

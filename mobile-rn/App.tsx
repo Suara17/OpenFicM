@@ -18,7 +18,8 @@ import { WritingScreen } from "@/screens/writing-screen";
 import { NotesScreen } from "@/screens/notes-screen";
 import { WorldInfoScreen } from "@/screens/world-info-screen";
 import { colors } from "@/theme";
-import { installMissingRuntimeResources, getRuntimeResourceState, type RuntimeResourceState } from "@/settings/remote-resources";
+import { installMissingRuntimeResources, getRuntimeResourceState, type RuntimeResourceState, type ResourceItemState } from "@/settings/remote-resources";
+import { setOhStorySkipped } from "@/settings/oh-story-updater";
 import { warmUpLocalModels } from "@/search/local-models";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
@@ -134,19 +135,36 @@ function RuntimeResourceGate() {
     }
   };
 
+  const skipOhStory = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await setOhStorySkipped(true);
+      await checkAndWarm();
+    } catch (skipError) {
+      setError(skipError instanceof Error ? skipError.message : String(skipError));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!state?.ready || !warmed) {
     const resourcesReady = state?.ready === true;
+    const canSkipOhStory = (state?.missing ?? []).some((item) => item.id === "oh-story");
     return (
       <View style={styles.resourceGate}>
         <StatusBar style="dark" />
         <Text style={styles.resourceTitle}>{resourcesReady ? "预热本地检索" : "准备 OpenFicM"}</Text>
         <Text style={styles.resourceSubtitle}>{resourcesReady ? "运行资源已完整，进入应用前需要加载嵌入和重排模型。" : "首次使用需要下载 Agent、Skill 和本地检索模型。"}</Text>
         <View style={styles.resourceList}>
-          {(state?.missing ?? []).map((item) => (
+          {(state?.items ?? []).map((item) => (
             <View key={item.id} style={styles.resourceRow}>
-              <View style={styles.resourceDot} />
+              <View style={[styles.resourceDot, item.status === "ready" && styles.resourceDotReady, item.status === "skipped" && styles.resourceDotSkipped]} />
               <View style={styles.resourceCopy}>
-                <Text style={styles.resourceLabel}>{item.label}</Text>
+                <View style={styles.resourceLabelRow}>
+                  <Text style={styles.resourceLabel}>{item.label}</Text>
+                  {item.status === "ready" ? <Text style={styles.resourceStatusReady}>已就绪</Text> : item.status === "skipped" ? <Text style={styles.resourceStatusSkipped}>已跳过</Text> : null}
+                </View>
                 <Text style={styles.resourceDetail}>{item.detail}</Text>
               </View>
             </View>
@@ -156,6 +174,11 @@ function RuntimeResourceGate() {
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => void (resourcesReady ? checkAndWarm() : download())} style={[styles.downloadButton, busy && styles.downloadButtonDisabled]}>
           {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.downloadButtonText}>{resourcesReady ? "重新预热" : "一键拉取并预热"}</Text>}
         </Pressable>
+        {canSkipOhStory && !resourcesReady ? (
+          <Pressable accessibilityRole="button" disabled={busy} onPress={() => void skipOhStory()} style={styles.skipButton}>
+            <Text style={styles.skipButtonText}>跳过 oh-story 下载（稍后手动上传）</Text>
+          </Pressable>
+        ) : null}
         <Pressable accessibilityRole="button" disabled={busy} onPress={() => void checkAndWarm()} style={styles.retryResourceButton}>
           <Text style={styles.retryResourceText}>重新检查</Text>
         </Pressable>
@@ -196,6 +219,13 @@ const styles = StyleSheet.create({
   downloadButton: { minHeight: 50, alignItems: "center", justifyContent: "center", marginTop: 20, borderRadius: 8, backgroundColor: colors.primary },
   downloadButtonDisabled: { opacity: 0.55 },
   downloadButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+  skipButton: { minHeight: 46, alignItems: "center", justifyContent: "center", marginTop: 10, borderRadius: 8, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  skipButtonText: { color: colors.text, fontSize: 14, fontWeight: "600" },
   retryResourceButton: { minHeight: 44, alignItems: "center", justifyContent: "center", marginTop: 8 },
   retryResourceText: { color: colors.primary, fontSize: 14, fontWeight: "700" },
+  resourceDotReady: { backgroundColor: colors.accent ?? "#10b981" },
+  resourceDotSkipped: { backgroundColor: colors.textMuted },
+  resourceLabelRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  resourceStatusReady: { fontSize: 11, color: colors.accent ?? "#10b981", fontWeight: "600" },
+  resourceStatusSkipped: { fontSize: 11, color: colors.textMuted, fontWeight: "600" },
 });

@@ -421,6 +421,78 @@ export async function installOhStoryRelease(
   return nextPackage;
 }
 
+export const OH_STORY_SKIPPED_KEY = "content.ohStory.skipped";
+
+export async function isOhStorySkipped(): Promise<boolean> {
+  const value = await getSetting(OH_STORY_SKIPPED_KEY);
+  return value === "true";
+}
+
+export async function setOhStorySkipped(skipped: boolean): Promise<void> {
+  await setSetting(OH_STORY_SKIPPED_KEY, skipped ? "true" : "false");
+}
+
+export async function importOhStoryPackageFromContent(content: string): Promise<OhStoryPackage> {
+  const json = JSON.parse(content);
+  // 支持直接导入完整的 OhStoryPackage JSON
+  const parsedDirect = packageSchema.safeParse(json);
+  if (parsedDirect.success) {
+    const state = await getOhStoryUpdateState();
+    await setSettings([
+      [PREVIOUS_PACKAGE_KEY, state.installed ? JSON.stringify(state.installed) : ""],
+      [PACKAGE_KEY, JSON.stringify(parsedDirect.data)],
+      [OH_STORY_SKIPPED_KEY, "false"],
+    ]);
+    return parsedDirect.data;
+  }
+
+  // 或者支持导入包含 skills 和 agents 的自定义包对象
+  const looseSchema = z.object({
+    version: versionSchema.default("v1.0.0"),
+    skills: z.array(z.object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      description: z.string().default(""),
+      instructions: z.string().min(1),
+      enabled: z.boolean().default(true),
+    })),
+    agents: z.array(z.object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      description: z.string().default(""),
+      systemPrompt: z.string().min(1),
+      modelId: z.string().default(""),
+      enabled: z.boolean().default(true),
+      kind: z.literal("subagent").default("subagent"),
+      skillIds: z.array(z.string()).default([]),
+      toolNames: z.array(z.string()).default([]),
+      delegatableAgentIds: z.array(z.string()).default([]),
+    })).default([]),
+  });
+
+  const parsedLoose = looseSchema.parse(json);
+  const hashSource = JSON.stringify(parsedLoose);
+  const sha256 = (await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, hashSource)).toLowerCase();
+  const nextPackage = packageSchema.parse({
+    source: "oh-story-claudecode",
+    version: parsedLoose.version,
+    publishedAt: new Date().toISOString(),
+    releaseUrl: "https://github.com/worldwonderer/oh-story-claudecode",
+    installedAt: new Date().toISOString(),
+    sha256,
+    skills: parsedLoose.skills.map((s) => ({ ...s, source: "remote" as const })),
+    agents: parsedLoose.agents.map((a) => ({ ...a, source: "remote" as const })),
+  });
+
+  const state = await getOhStoryUpdateState();
+  await setSettings([
+    [PREVIOUS_PACKAGE_KEY, state.installed ? JSON.stringify(state.installed) : ""],
+    [PACKAGE_KEY, JSON.stringify(nextPackage)],
+    [OH_STORY_SKIPPED_KEY, "false"],
+  ]);
+  return nextPackage;
+}
+
 export async function rollbackOhStoryPackage(): Promise<OhStoryPackage> {
   const state = await getOhStoryUpdateState();
   if (!state.previous) throw new Error("没有可回滚的 oh-story 内容包");
