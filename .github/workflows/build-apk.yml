@@ -42,6 +42,7 @@ jobs:
       - name: Build Standalone APK
         working-directory: mobile-rn/android
         run: |
+          chmod +x ./gradlew
           ./gradlew assembleStandalone --no-daemon
 
       - name: Find and Organize APK
